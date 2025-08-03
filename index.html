@@ -4,7 +4,6 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Auto Ads Show</title>
-  <!-- টেলিগ্রাম ওয়েব অ্যাপের জন্য অফিশিয়াল স্ক্রিপ্ট -->
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <style>
     body {
@@ -64,7 +63,7 @@
         left: 0;
         width: 100%;
         height: 100%;
-        transform: rotate(-90deg); /* বৃত্তের শুরু উপর থেকে করার জন্য */
+        transform: rotate(-90deg);
     }
     .progress-circle-track {
         fill: none;
@@ -139,27 +138,18 @@
         </div>
     </div>
     <div class="buttons">
-      <button onclick="watchAd()">🎬 Watch Ad</button>
+      <button onclick="watchAd()">🎬 Watch Ads</button>
       <button id="auto-ad-btn" onclick="startAutoAds()">⚙️ Auto Show Ads</button>
       <button id="stop-auto-btn" onclick="stopAutoAds()" disabled>⛔ Stop Auto Ads</button>
     </div>
   </div>
 
-  <!-- Monetag Ad SDK -->
   <script src='//libtl.com/sdk.js' data-zone='9661397' data-sdk='show_9661397'></script>
 
   <script>
-    // --- গ্লোবাল ভেরিয়েবল ---
     let watchedAdsCount = 0;
     let isAutoAdsRunning = false;
-    let autoAdTimeout;
-
-    // --- টেলিগ্রাম এবং দৈনিক রিসেট লজিক ---
-
-    /**
-     * টেলিগ্রাম এপিআই থেকে ব্যবহারকারীর নাম লোড করে।
-     * অ্যাপটি টেলিগ্রামের বাইরে খোলা হলে একটি ডিফল্ট নাম দেখায়।
-     */
+    let autoAdTimeout;    
     function setUserName() {
         const userNameSpan = document.getElementById("user-name");
         try {
@@ -175,11 +165,6 @@
             userNameSpan.textContent = "@exampleUser";
         }
     }
-
-    /**
-     * প্রতিদিন (UTC মধ্যরাত) বিজ্ঞাপন গণনা রিসেট করে।
-     * এটি ব্রাউজারের LocalStorage-এ শেষ বিজ্ঞাপন দেখার তারিখ সেভ করে রাখে।
-     */
     function checkAndResetCounter() {
         const todayUTC = new Date().toISOString().slice(0, 10);
         const lastVisitUTC = localStorage.getItem('lastAdDate');
@@ -191,17 +176,11 @@
             watchedAdsCount = parseInt(localStorage.getItem('watchedAdsCount')) || 0;
         }
     }
-
-    // --- মূল বিজ্ঞাপন এবং UI ফাংশন ---
-
-    /**
-     * বিজ্ঞাপন দেখানোর মূল ফাংশন। এটি একটি Promise রিটার্ন করে।
-     */
     function watchAd() {
       return new Promise((resolve, reject) => {
         if (typeof show_9661397 === 'function') {
           show_9661397().then(() => {
-            checkAndResetCounter(); // প্রতিটি বিজ্ঞাপনের পরে তারিখ চেক করা হয়
+            checkAndResetCounter(); 
             watchedAdsCount++;
             localStorage.setItem('watchedAdsCount', watchedAdsCount);
             localStorage.setItem('lastAdDate', new Date().toISOString().slice(0, 10));
@@ -213,24 +192,14 @@
         }
       });
     }
-
-    /**
-     * UI (ইউজার ইন্টারফেস) আপডেট করে।
-     */
     function updateUI() {
         document.getElementById('watched-ads').textContent = watchedAdsCount;
         updateProgressCircle();
     }
 
-    /**
-     * টেক্সট পার্সেন্টেজ এবং সবুজ বৃত্তের অগ্রগতি আপডেট করে।
-     */
     function updateProgressCircle() {
-        // ১. প্রতি ১০টি বিজ্ঞাপনের জন্য ১% করে টেক্সট আপডেট
         const textPercent = Math.floor(watchedAdsCount / 10);
         document.getElementById('ads-progress').textContent = `${textPercent}%`;
-
-        // ২. ১০০০ বিজ্ঞাপনের লক্ষ্যে সবুজ বৃত্তের অগ্রগতি আপডেট
         const greenProgressElement = document.getElementById('green-progress');
         const radius = greenProgressElement.r.baseVal.value;
         const circumference = 2 * Math.PI * radius;
@@ -239,13 +208,6 @@
         greenProgressElement.style.strokeDasharray = circumference;
         greenProgressElement.style.strokeDashoffset = offset;
     }
-
-    // --- স্বয়ংক্রিয় বিজ্ঞাপন ফাংশন ---
-
-    /**
-     * স্বয়ংক্রিয়ভাবে বিজ্ঞাপন দেখানোর জন্য নির্ভরযোগ্য লুপ।
-     * একটি বিজ্ঞাপন শেষ হলে ২ সেকেন্ড পর পরেরটি দেখায়।
-     */
     function autoAdLoop() {
         if (!isAutoAdsRunning) return;
         watchAd()
@@ -273,7 +235,6 @@
         document.getElementById('stop-auto-btn').disabled = true;
     }
 
-    // --- অ্যাপ চালু হলে যে ফাংশনগুলো প্রথমে চালানো হবে ---
     document.addEventListener('DOMContentLoaded', () => {
         setUserName();
         checkAndResetCounter();
