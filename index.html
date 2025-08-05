@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Auto Ads Show</title>
+  <!-- টেলিগ্রাম ওয়েব অ্যাপের জন্য অফিশিয়াল স্ক্রিপ্ট -->
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <style>
     body {
@@ -15,7 +16,8 @@
       display: flex;
       justify-content: center;
       align-items: center;
-      height: 100vh;
+      min-height: 100vh;
+      padding: 15px 0;
     }
     .container {
       text-align: center;
@@ -99,7 +101,6 @@
       border: none;
       border-radius: 8px;
       font-weight: bold;
-      background: linear-gradient(to bottom, #43cea2, #185a9d);
       color: white;
       box-shadow: 0 5px 0 #0e4c7d;
       transition: all 0.2s ease;
@@ -107,12 +108,31 @@
     }
     .buttons button:hover {
       transform: translateY(-2px);
-      background: linear-gradient(to bottom, #f7971e, #ffd200);
       box-shadow: 0 7px 0 #d17d00;
     }
     .buttons button:disabled {
       opacity: 0.5;
       cursor: not-allowed;
+      transform: translateY(0);
+      box-shadow: 0 5px 0 #0e4c7d;
+    }
+    #auto-ad-btn, #manual-ad-btn {
+       background: linear-gradient(to bottom, #43cea2, #185a9d);
+    }
+     #auto-ad-btn:hover:not(:disabled), #manual-ad-btn:hover:not(:disabled) {
+       background: linear-gradient(to bottom, #50dfb3, #1e6fc8);
+    }
+    #auto-adsterra-btn {
+        background: linear-gradient(to bottom, #8E2DE2, #4A00E0);
+        box-shadow: 0 5px 0 #3c00b3;
+    }
+    #auto-adsterra-btn:hover:not(:disabled) {
+        background: linear-gradient(to bottom, #9d4edd, #5a18ed);
+        box-shadow: 0 7px 0 #3c00b3;
+    }
+     #stop-all-auto-btn {
+        background: linear-gradient(to bottom, #e52d27, #b31217);
+        box-shadow: 0 5px 0 #8f0e12;
     }
   </style>
 </head>
@@ -138,33 +158,41 @@
         </div>
     </div>
     <div class="buttons">
-      <button onclick="watchAd()">🎬 Watch Ads</button>
-      <button id="auto-ad-btn" onclick="startAutoAds()">⚙️ Auto Show Ads</button>
-      <button id="stop-auto-btn" onclick="stopAutoAds()" disabled>⛔ Stop Auto Ads</button>
+      <button id="manual-ad-btn" onclick="watchAd()">🎬 Watch Ad (Monetag)</button>
+      <button id="auto-ad-btn" onclick="startAutoAds()">⚙️ Auto Ads (Monetag)</button>
+      <button id="auto-adsterra-btn" onclick="startAdsterraAutoAds()">⚙️ Auto Ads (Adsterra)</button>
+      
+      <!-- একটিমাত্র Stop বাটন -->
+      <button id="stop-all-auto-btn" onclick="stopAllAutoAds()" disabled>⛔ Stop Auto Ads</button>
     </div>
   </div>
+  
+  <!-- Adsterra বিজ্ঞাপন দেখানোর জন্য একটি খালি কন্টেইনার -->
+  <div id="adsterra-container" style="margin-top:15px;"></div>
 
+  <!-- Monetag Ad SDK -->
   <script src='//libtl.com/sdk.js' data-zone='9661397' data-sdk='show_9661397'></script>
 
   <script>
+    // --- গ্লোবাল ভেরিয়েবল ---
     let watchedAdsCount = 0;
     let isAutoAdsRunning = false;
-    let autoAdTimeout;    
+    let autoAdTimeout;
+    let isAdsterraAutoRunning = false;
+    let adsterraTimeout;
+
+    // --- টেলিগ্রাম এবং দৈনিক রিসেট লজিক ---
     function setUserName() {
         const userNameSpan = document.getElementById("user-name");
         try {
             const tg = window.Telegram.WebApp;
             const user = tg.initDataUnsafe.user;
-            if (user && user.first_name) {
-                const fullName = `${user.first_name} ${user.last_name || ''}`.trim();
-                userNameSpan.textContent = fullName;
-            } else {
-                userNameSpan.textContent = "Guest";
-            }
+            userNameSpan.textContent = user && user.first_name ? `${user.first_name} ${user.last_name || ''}`.trim() : "Guest";
         } catch (error) {
             userNameSpan.textContent = "@exampleUser";
         }
     }
+
     function checkAndResetCounter() {
         const todayUTC = new Date().toISOString().slice(0, 10);
         const lastVisitUTC = localStorage.getItem('lastAdDate');
@@ -176,22 +204,64 @@
             watchedAdsCount = parseInt(localStorage.getItem('watchedAdsCount')) || 0;
         }
     }
+    
+    // --- বিজ্ঞাপন দেখানোর ফাংশন ---
+
+    /**
+     * Monetag বিজ্ঞাপন দেখানোর মূল ফাংশন।
+     */
     function watchAd() {
       return new Promise((resolve, reject) => {
         if (typeof show_9661397 === 'function') {
           show_9661397().then(() => {
-            checkAndResetCounter(); 
-            watchedAdsCount++;
-            localStorage.setItem('watchedAdsCount', watchedAdsCount);
-            localStorage.setItem('lastAdDate', new Date().toISOString().slice(0, 10));
-            updateUI();
+            updateAdCount();
             resolve();
           }).catch(reject);
         } else {
-          reject("Ad function not available");
+          reject("Monetag ad function not available");
         }
       });
     }
+
+    /**
+     * আপনার দেওয়া Adsterra কোড দিয়ে বিজ্ঞাপন দেখানোর ফাংশন।
+     */
+    function watchAdsterraAd() {
+        return new Promise((resolve, reject) => {
+            const container = document.getElementById('adsterra-container');
+            if (!container) return reject("Adsterra container not found");
+            
+            // প্রতিবার নতুন বিজ্ঞাপন দেখানোর আগে পুরনোটি মুছে ফেলা হয়
+            container.innerHTML = '';
+
+            const adScript = document.createElement('script');
+            adScript.type = 'text/javascript';
+            // আপনার দেওয়া Adsterra স্ক্রিপ্ট সোর্স
+            adScript.src = '//pl27353569.profitableratecpm.com/30/a0/6f/30a06f39b2ceafcedada24e44908d884.js';
+            
+            adScript.onload = () => {
+                // এখানে সরাসরি কোনো লোডিং ইভেন্ট নেই, তাই স্ক্রিপ্ট যুক্ত হওয়ার পরেই গণনা আপডেট করা হচ্ছে
+                updateAdCount();
+                resolve();
+            };
+            adScript.onerror = () => reject("Adsterra script failed to load");
+
+            container.appendChild(adScript);
+        });
+    }
+
+    /**
+     * বিজ্ঞাপন গণনা এবং UI আপডেট করার জন্য একটি সমন্বিত ফাংশন।
+     */
+    function updateAdCount() {
+        checkAndResetCounter();
+        watchedAdsCount++;
+        localStorage.setItem('watchedAdsCount', watchedAdsCount);
+        localStorage.setItem('lastAdDate', new Date().toISOString().slice(0, 10));
+        updateUI();
+    }
+
+    // --- UI আপডেট ফাংশন ---
     function updateUI() {
         document.getElementById('watched-ads').textContent = watchedAdsCount;
         updateProgressCircle();
@@ -200,6 +270,7 @@
     function updateProgressCircle() {
         const textPercent = Math.floor(watchedAdsCount / 10);
         document.getElementById('ads-progress').textContent = `${textPercent}%`;
+
         const greenProgressElement = document.getElementById('green-progress');
         const radius = greenProgressElement.r.baseVal.value;
         const circumference = 2 * Math.PI * radius;
@@ -208,33 +279,60 @@
         greenProgressElement.style.strokeDasharray = circumference;
         greenProgressElement.style.strokeDashoffset = offset;
     }
+
+    // --- স্বয়ংক্রিয় বিজ্ঞাপন লুপ ---
+
     function autoAdLoop() {
         if (!isAutoAdsRunning) return;
-        watchAd()
-            .then(() => {
-                if (isAutoAdsRunning) autoAdTimeout = setTimeout(autoAdLoop, 2000);
-            })
-            .catch(error => {
-                console.error("Ad failed:", error);
-                if (isAutoAdsRunning) autoAdTimeout = setTimeout(autoAdLoop, 2000);
-            });
+        watchAd().finally(() => {
+            if (isAutoAdsRunning) autoAdTimeout = setTimeout(autoAdLoop, 2000);
+        });
+    }
+    
+    function autoAdsterraLoop() {
+        if (!isAdsterraAutoRunning) return;
+        watchAdsterraAd().finally(() => {
+            // Adsterra বিজ্ঞাপন পুনরায় লোড হওয়ার জন্য বেশি সময় দেওয়া হলো
+            if (isAdsterraAutoRunning) adsterraTimeout = setTimeout(autoAdsterraLoop, 5000);
+        });
     }
 
+    // --- Start এবং Stop ফাংশন ---
+
     function startAutoAds() {
-        if (isAutoAdsRunning) return;
+        if (isAutoAdsRunning || isAdsterraAutoRunning) return;
         isAutoAdsRunning = true;
-        document.getElementById('auto-ad-btn').disabled = true;
-        document.getElementById('stop-auto-btn').disabled = false;
+        setButtonsState(true); // বাটনগুলোর অবস্থা পরিবর্তন
         autoAdLoop();
     }
 
-    function stopAutoAds() {
-        isAutoAdsRunning = false;
-        clearTimeout(autoAdTimeout);
-        document.getElementById('auto-ad-btn').disabled = false;
-        document.getElementById('stop-auto-btn').disabled = true;
+    function startAdsterraAutoAds() {
+        if (isAutoAdsRunning || isAdsterraAutoRunning) return;
+        isAdsterraAutoRunning = true;
+        setButtonsState(true); // বাটনগুলোর অবস্থা পরিবর্তন
+        autoAdsterraLoop();
     }
 
+    // একটিমাত্র Stop ফাংশন
+    function stopAllAutoAds() {
+        isAutoAdsRunning = false;
+        isAdsterraAutoRunning = false;
+        clearTimeout(autoAdTimeout);
+        clearTimeout(adsterraTimeout);
+        setButtonsState(false); // বাটনগুলোর অবস্থা স্বাভাবিক করা
+    }
+    
+    /**
+     * বাটনগুলোর অবস্থা পরিবর্তন করার জন্য একটি হেল্পার ফাংশন।
+     * @param {boolean} isRunning - অটো অ্যাড চলছে কি না।
+     */
+    function setButtonsState(isRunning) {
+        document.getElementById('auto-ad-btn').disabled = isRunning;
+        document.getElementById('auto-adsterra-btn').disabled = isRunning;
+        document.getElementById('stop-all-auto-btn').disabled = !isRunning;
+    }
+
+    // --- অ্যাপ চালু হলে যে ফাংশনগুলো প্রথমে চালানো হবে ---
     document.addEventListener('DOMContentLoaded', () => {
         setUserName();
         checkAndResetCounter();
