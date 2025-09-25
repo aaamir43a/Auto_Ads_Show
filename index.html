@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>double network Ads Show</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1f1c2c, #928dab);
+            color: #fff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        .container {
+            text-align: center;
+            background: linear-gradient(to right, #232526, #414345);
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.6);
+            width: 320px;
+        }
+
+        .container h1 {
+            font-size: 24px;
+            background: linear-gradient(to right, #00c6ff, #0072ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 15px;
+        }
+
+        .developer {
+            font-size: 13px;
+            background: linear-gradient(45deg, #11998e, #38ef7d);
+            padding: 6px 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: inline-block;
+            color: #fff;
+            font-weight: bold;
+            box-shadow: 0 3px 0 #0e6b5f;
+            cursor: pointer;
+        }
+
+        .developer:hover {
+            opacity: 0.9;
+        }
+
+        .stats p,
+        .user-info p {
+            font-size: 15px;
+            margin: 6px 0;
+        }
+
+        .display-area {
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100px;
+            margin: 20px auto;
+        }
+
+        #network-indicator {
+            position: absolute;
+            left: 25px;
+            top: 50%;
+            transform: translateY(-50%);
+            
+            width: 50px;
+            height: 50px;
+            border: 2px solid; /* রঙ এখন ক্লাস দ্বারা নির্ধারিত হবে */
+            border-radius: 10px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 32px;
+            font-weight: bold;
+            transition: color 0.3s ease, border-color 0.3s ease; /* রঙ পরিবর্তনের জন্য স্মুথ ট্রানজিশন */
+        }
+        
+        /* ** নতুন দুটি ক্লাস যুক্ত করা হয়েছে ** */
+        .g-style {
+            color: #43cea2; /* সবুজ রঙ */
+            border-color: #43cea2;
+        }
+
+        .m-style {
+            color: #ffeb3b; /* হলুদ রঙ */
+            border-color: #ffeb3b;
+        }
+
+
+        .progress-container {
+            position: relative;
+            width: 100px;
+            height: 100px;
+            margin: 0; 
+        }
+
+        .progress-svg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            transform: rotate(-90deg);
+        }
+
+        .progress-circle-track {
+            fill: none;
+            stroke-width: 8;
+            stroke: #ff9800;
+            opacity: 0.3;
+        }
+
+        #green-progress {
+            fill: none;
+            stroke-width: 8;
+            stroke: #00ff00;
+            stroke-linecap: round;
+            transition: stroke-dashoffset 0.5s ease;
+        }
+
+        .progress-text-container {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #ads-progress {
+            font-size: 18px;
+            font-weight: bold;
+            color: #ffeb3b;
+        }
+
+        .buttons button {
+            width: 90%;
+            margin: 8px 0;
+            padding: 12px;
+            font-size: 15px;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            background: linear-gradient(to bottom, #43cea2, #185a9d);
+            color: white;
+            box-shadow: 0 5px 0 #0e4c7d;
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+
+        .buttons button:hover {
+            transform: translateY(-2px);
+            background: linear-gradient(to bottom, #f7971e, #ffd200);
+            box-shadow: 0 7px 0 #d17d00;
+        }
+
+        .buttons button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>Auto Ads Show Bot</h1>
+        <div class="developer" onclick="window.location.href='https://t.me/amir47812'">
+            Developer by Amir Hossain
+        </div>
+        <div class="user-info">
+            <p>Welcome, <span id="user-name"></span></p>
+        </div>
+        <div class="stats">
+            <p>Watched Ads: <span id="watched-ads">0</span></p>
+        </div>
+
+        <div class="display-area">
+            <div id="network-indicator"></div>
+            <div class="progress-container">
+                <svg class="progress-svg" viewBox="0 0 100 100">
+                    <circle class="progress-circle-track" cx="50" cy="50" r="45"></circle>
+                    <circle id="green-progress" cx="50" cy="50" r="45"></circle>
+                </svg>
+                <div class="progress-text-container">
+                    <span id="ads-progress">0%</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="buttons">
+            <button id="watch-ad-btn" onclick="manualWatchAd()">🎬 Watch Ads</button>
+            <button id="auto-ad-btn" onclick="startAutoAds()">⚙️ Auto Show Ads</button>
+            <button id="stop-auto-btn" onclick="stopAutoAds()" disabled>⛔ Stop Auto Ads</button>
+        </div>
+    </div>
+    
+    <script src="https://ad.gigapub.tech/script?id=2364"></script>
+    <script src='//libtl.com/sdk.js' data-zone='9646545' data-sdk='show_9646545'></script>
+
+    <script>
+        let watchedAdsCount = 0;
+        let isAutoAdsRunning = false;
+        let autoAdTimeout;
+
+        let currentAdNetwork = 'giga';
+        let adsShownForCurrentNetwork = 0;
+        const adsPerNetwork = 5; 
+
+        // --- updateNetworkIndicator ফাংশনে পরিবর্তন আনা হয়েছে ---
+        function updateNetworkIndicator() {
+            const indicator = document.getElementById('network-indicator');
+            if (currentAdNetwork === 'giga') {
+                indicator.textContent = 'G';
+                indicator.classList.remove('m-style'); // হলুদ ক্লাসটি সরিয়ে দাও
+                indicator.classList.add('g-style');    // সবুজ ক্লাসটি যুক্ত করো
+            } else { 
+                indicator.textContent = 'M';
+                indicator.classList.remove('g-style');  // সবুজ ক্লাসটি সরিয়ে দাও
+                indicator.classList.add('m-style');     // হলুদ ক্লাসটি যুক্ত করো
+            }
+        }
+        
+        // --- বাকি সব জাভাস্ক্রিপ্ট কোড অপরিবর্তিত আছে ---
+
+        function setUserName() {
+            const userNameSpan = document.getElementById("user-name");
+            try {
+                const tg = window.Telegram.WebApp;
+                const user = tg.initDataUnsafe.user;
+                if (user && user.first_name) {
+                    const fullName = `${user.first_name} ${user.last_name || ''}`.trim();
+                    userNameSpan.textContent = fullName;
+                } else {
+                    userNameSpan.textContent = "Guest";
+                }
+            } catch (error) {
+                userNameSpan.textContent = "@exampleUser";
+            }
+        }
+
+        function checkAndResetCounter() {
+            const todayUTC = new Date().toISOString().slice(0, 10);
+            const lastVisitUTC = localStorage.getItem('lastAdDate');
+            if (lastVisitUTC !== todayUTC) {
+                watchedAdsCount = 0;
+                localStorage.setItem('watchedAdsCount', '0');
+                localStorage.setItem('lastAdDate', todayUTC);
+            } else {
+                watchedAdsCount = parseInt(localStorage.getItem('watchedAdsCount')) || 0;
+            }
+        }
+        
+        function watchAd() {
+            return new Promise((resolve, reject) => {
+                if (currentAdNetwork === 'giga') {
+                    if (typeof window.showGiga === 'function') {
+                        window.showGiga().then(resolve).catch(reject);
+                    } else {
+                        reject("GigaPub function 'showGiga' is not available.");
+                    }
+                } else if (currentAdNetwork === 'libtl') {
+                    if (typeof window.show_9646545 === 'function') {
+                        window.show_9646545().then(resolve).catch(reject);
+                    } else {
+                        reject("TeleLib function 'show_9646545' is not available.");
+                    }
+                }
+            });
+        }
+        
+        function handleSuccessfulAdView() {
+            checkAndResetCounter();
+            watchedAdsCount++;
+            adsShownForCurrentNetwork++;
+
+            localStorage.setItem('watchedAdsCount', watchedAdsCount);
+            localStorage.setItem('lastAdDate', new Date().toISOString().slice(0, 10));
+            updateUI();
+
+            if (adsShownForCurrentNetwork >= adsPerNetwork) {
+                if (currentAdNetwork === 'giga') {
+                    currentAdNetwork = 'libtl';
+                } else {
+                    currentAdNetwork = 'giga';
+                }
+                adsShownForCurrentNetwork = 0;
+            }
+            updateNetworkIndicator();
+        }
+
+        function manualWatchAd() {
+            const watchBtn = document.getElementById('watch-ad-btn');
+            watchBtn.disabled = true;
+
+            watchAd()
+                .then(() => {
+                    handleSuccessfulAdView();
+                })
+                .catch(error => {
+                    console.error("Manual ad watch failed:", error);
+                    alert("Ad could not be loaded. Please try again.");
+                })
+                .finally(() => {
+                    watchBtn.disabled = false;
+                });
+        }
+
+        function updateUI() {
+            document.getElementById('watched-ads').textContent = watchedAdsCount;
+            updateProgressCircle();
+        }
+
+        function updateProgressCircle() {
+            const textPercent = Math.floor(watchedAdsCount / 10);
+            document.getElementById('ads-progress').textContent = `${textPercent}%`;
+            const greenProgressElement = document.getElementById('green-progress');
+            const radius = greenProgressElement.r.baseVal.value;
+            const circumference = 2 * Math.PI * radius;
+            const progress = Math.min(watchedAdsCount / 1000, 1);
+            const offset = circumference * (1 - progress);
+            greenProgressElement.style.strokeDasharray = circumference;
+            greenProgressElement.style.strokeDashoffset = offset;
+        }
+        
+        function autoAdLoop() {
+            if (!isAutoAdsRunning) return;
+            watchAd()
+                .then(() => {
+                    handleSuccessfulAdView();
+                    if (isAutoAdsRunning) autoAdTimeout = setTimeout(autoAdLoop, 2000);
+                })
+                .catch(error => {
+                    console.error("Auto ad failed:", error);
+                    if (isAutoAdsRunning) autoAdTimeout = setTimeout(autoAdLoop, 2000);
+                });
+        }
+        
+        function startAutoAds() {
+            if (isAutoAdsRunning) return;
+            isAutoAdsRunning = true;
+            document.getElementById('auto-ad-btn').disabled = true;
+            document.getElementById('stop-auto-btn').disabled = false;
+            document.getElementById('watch-ad-btn').disabled = true;
+            autoAdLoop();
+        }
+
+        function stopAutoAds() {
+            isAutoAdsRunning = false;
+            clearTimeout(autoAdTimeout);
+            document.getElementById('auto-ad-btn').disabled = false;
+            document.getElementById('stop-auto-btn').disabled = true;
+            document.getElementById('watch-ad-btn').disabled = false;
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            setUserName();
+            checkAndResetCounter();
+            updateUI();
+            updateNetworkIndicator();
+        });
+    </script>
+</body>
+
+</html>
